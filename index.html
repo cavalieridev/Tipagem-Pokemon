@@ -1,0 +1,580 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+
+<title>Tipagem Pokémon</title>
+<meta name="description" content="Consulta rápida de tipagem Pokémon: defesa, ataque e tabela completa dos 18 tipos. Funciona offline.">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#EDF0F6">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0B1120">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Tipagem">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap">
+<style>
+  /* Layout: coluna única de até 560px. Abas fixas no topo (Defesa, Ataque, Tabela).
+     Seletor de tipos em grade 6x3 colorida; resultados agrupados por multiplicador; matriz 18x18 que cabe na largura do celular. */
+  :root {
+    --bg: #EDF0F6;
+    --surface: #FFFFFF;
+    --surface-2: #E1E6F0;
+    --ink: #111A2E;
+    --ink-soft: #4B5770;
+    --line: #C9D1E0;
+    --accent: #2750D8;
+
+    --x4-bg: #0A5B2E; --x4-fg: #FFFFFF;
+    --x2-bg: #17803F; --x2-fg: #FFFFFF;
+    --xh-bg: #B45309; --xh-fg: #FFFFFF;
+    --xq-bg: #8B1A1A; --xq-fg: #FFFFFF;
+    --x0-bg: #1B2232; --x0-fg: #FFFFFF;
+
+    --font-ui: 'Barlow', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-num: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0B1120;
+      --surface: #141C2F;
+      --surface-2: #1E2842;
+      --ink: #E8ECF6;
+      --ink-soft: #97A3BD;
+      --line: #2A3553;
+      --accent: #8FA8FF;
+      --x4-bg: #4ADE80; --x4-fg: #052E16;
+      --x2-bg: #1F7A46; --x2-fg: #EAFBF1;
+      --xh-bg: #B45309; --xh-fg: #FFF4E8;
+      --xq-bg: #A32626; --xq-fg: #FFECEC;
+      --x0-bg: #04070D; --x0-fg: #E8ECF6;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0B1120;
+    --surface: #141C2F;
+    --surface-2: #1E2842;
+    --ink: #E8ECF6;
+    --ink-soft: #97A3BD;
+    --line: #2A3553;
+    --accent: #8FA8FF;
+    --x4-bg: #4ADE80; --x4-fg: #052E16;
+    --x2-bg: #1F7A46; --x2-fg: #EAFBF1;
+    --xh-bg: #B45309; --xh-fg: #FFF4E8;
+    --xq-bg: #A32626; --xq-fg: #FFECEC;
+    --x0-bg: #04070D; --x0-fg: #E8ECF6;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: 15px;
+    line-height: 1.35;
+    padding-block: 10px 32px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0 0 auto;
+    height: env(safe-area-inset-top, 0px);
+    background: var(--bg);
+    z-index: 10;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; }
+  button { font-family: inherit; color: inherit; touch-action: manipulation; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  /* Cabeçalho */
+  .hero { display: flex; align-items: center; gap: 12px; padding-block: 4px 2px; }
+  .wheel {
+    flex: none; width: 40px; height: 40px; border-radius: 50%;
+    -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 9px), #000 calc(100% - 8px));
+            mask: radial-gradient(farthest-side, #0000 calc(100% - 9px), #000 calc(100% - 8px));
+  }
+  h1 {
+    margin: 0; font-family: var(--font-num); font-weight: 800; font-size: 30px; line-height: 1;
+    letter-spacing: .02em; text-transform: uppercase;
+  }
+  .sub { margin: 3px 0 0; font-size: 13px; color: var(--ink-soft); }
+
+  /* Abas */
+  .tabs { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 8px 10px; }
+  .seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; background: var(--surface-2); padding: 4px; border-radius: 14px; }
+  .seg button {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    min-height: 44px; border: 0; border-radius: 10px; background: transparent;
+    font-size: 15px; font-weight: 600; color: var(--ink-soft); cursor: pointer;
+  }
+  .seg button svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .seg button[aria-selected="true"] { background: var(--ink); color: var(--bg); }
+
+  /* Cartão e seletor */
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 12px; }
+  .card-h { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+  .card-h h2 { margin: 0; font-family: var(--font-num); font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+  .card-h small { flex: 1; color: var(--ink-soft); font-size: 12.5px; }
+  .link { background: none; border: 0; color: var(--accent); font-weight: 600; font-size: 13.5px; padding: 6px 2px; cursor: pointer; }
+
+  .picker { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+  .pk {
+    position: relative; border: 0; border-radius: 12px; background: var(--c); color: var(--g);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    padding: 8px 0 6px; min-height: 58px; font-size: 10.5px; font-weight: 700; line-height: 1; cursor: pointer;
+  }
+  .pk svg { width: 24px; height: 24px; fill: currentColor; }
+  .pk[aria-pressed="true"] { outline: 3px solid var(--ink); outline-offset: 2px; }
+  .pk .ord {
+    display: none; position: absolute; top: -7px; right: -5px; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--ink); color: var(--bg); font: 800 12px/18px var(--font-num); text-align: center;
+  }
+  .pk[aria-pressed="true"] .ord { display: block; }
+
+  /* Resultados */
+  .res { display: flex; flex-direction: column; gap: 20px; margin-top: 18px; }
+  .who { margin: 0; font-family: var(--font-num); font-size: 27px; font-weight: 800; line-height: 1.05; text-transform: uppercase; letter-spacing: .01em; }
+  .who small { display: block; margin-top: 3px; font: 500 13px/1.3 var(--font-ui); text-transform: none; letter-spacing: 0; color: var(--ink-soft); }
+  .gh { display: flex; align-items: center; gap: 10px; padding-bottom: 8px; margin-bottom: 10px; border-bottom: 1px solid var(--line); }
+  .gh h3 { flex: 1; margin: 0; font-size: 15px; font-weight: 600; }
+  .ct { font-size: 12.5px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .mp { display: inline-block; min-width: 48px; padding: 5px 10px 4px; border-radius: 8px; text-align: center; font: 800 20px/1 var(--font-num); }
+  .m4 { background: var(--x4-bg); color: var(--x4-fg); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--x4-bg); margin: 0 4px; }
+  .m2 { background: var(--x2-bg); color: var(--x2-fg); }
+  .mh { background: var(--xh-bg); color: var(--xh-fg); }
+  .mq { background: var(--xq-bg); color: var(--xq-fg); }
+  .m0 { background: var(--x0-bg); color: var(--x0-fg); box-shadow: inset 0 0 0 1px var(--line); }
+  .m1 { background: var(--surface-2); color: var(--ink); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px 0 8px; border-radius: 10px;
+    background: var(--c); color: var(--g); font-size: 14px; font-weight: 700; line-height: 1;
+  }
+  .chip svg { width: 20px; height: 20px; flex: none; fill: currentColor; }
+
+  details.grp > summary { list-style: none; cursor: pointer; }
+  details.grp > summary::-webkit-details-marker { display: none; }
+  details.grp > summary.gh { margin-bottom: 0; }
+  details.grp[open] > summary.gh { margin-bottom: 10px; }
+  .chev { width: 8px; height: 8px; margin: 0 4px 3px 2px; border-right: 2px solid var(--ink-soft); border-bottom: 2px solid var(--ink-soft); transform: rotate(45deg); transition: transform .15s; }
+  details[open] .chev { transform: rotate(-135deg); margin-bottom: -3px; }
+  .empty { color: var(--ink-soft); margin: 0; }
+
+  /* Alternância dentro da aba Defesa */
+  .view-seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin-top: 14px; padding: 3px; background: var(--surface-2); border-radius: 12px; }
+  .view-seg button { min-height: 40px; border: 0; border-radius: 9px; background: transparent; font-size: 14px; font-weight: 600; color: var(--ink-soft); cursor: pointer; }
+  .view-seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--line); }
+  .off { display: flex; flex-direction: column; gap: 20px; }
+  .off + .off { padding-top: 20px; border-top: 1px solid var(--line); }
+  .off-h { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--ink-soft); }
+
+  /* Matriz */
+  .ro-card { margin-bottom: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .pair { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+  .pair small { display: block; margin-bottom: 4px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
+  .arrow { padding-bottom: 9px; font-weight: 700; color: var(--ink-soft); }
+  .ro-res { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+  .mx {
+    display: grid; grid-template-columns: repeat(19, minmax(0, 1fr)); gap: 1px;
+    background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+  }
+  .mx .cell, .mx .hd, .mx .corner { aspect-ratio: 1; min-width: 0; margin: 0; padding: 0; border: 0; border-radius: 0; }
+  .corner { background: var(--surface-2); }
+  .hd { display: grid; place-items: center; background: var(--c); color: var(--g); }
+  .hd svg { width: 68%; height: 68%; fill: currentColor; }
+  .hd.on { box-shadow: inset 0 0 0 2px var(--ink); }
+  .cell {
+    display: grid; place-items: center; background: var(--surface); color: var(--ink);
+    font-family: var(--font-num); font-weight: 700; font-size: clamp(9px, 3vw, 13px); line-height: 1; cursor: pointer;
+  }
+  .cell.m2 { background: var(--x2-bg); color: var(--x2-fg); }
+  .cell.mh { background: var(--xh-bg); color: var(--xh-fg); }
+  .cell.m0 { background: var(--x0-bg); color: var(--x0-fg); }
+  .cell.m1 { background: var(--surface); }
+  .cell.m1.rc { background: var(--surface-2); }
+  .cell.sel { position: relative; z-index: 2; outline: 2px solid var(--ink); outline-offset: -2px; }
+  .mx-cap { margin: 0 0 8px; font-size: 12.5px; color: var(--ink-soft); }
+  .legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 12px; font-size: 12.5px; color: var(--ink-soft); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 4px; font: 700 12px/1 var(--font-num); border: 1px solid var(--line); background: var(--surface); }
+  .sw.m2, .sw.mh, .sw.m0 { border-color: transparent; }
+  .key { margin-top: 14px; }
+  .key summary { cursor: pointer; font-weight: 600; color: var(--accent); padding: 6px 0; }
+  .key .chips { margin-top: 8px; }
+  .foot { margin: 22px 0 0; font-size: 12.5px; color: var(--ink-soft); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="t-normal" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="3.2"/></symbol>
+    <symbol id="t-fogo" viewBox="0 0 24 24"><path d="M12 2.2c.9 3.2-.2 5-1.6 6.9C9 11 7 12.9 7 15.7a5 5 0 0 0 10 0c0-2-.9-3.3-1.9-4.5-.4 1.2-1 1.9-1.9 2.3.5-3.3-.1-7.6-1.2-11.3z"/></symbol>
+    <symbol id="t-agua" viewBox="0 0 24 24"><path d="M12 2.5C12 2.5 5.5 9.8 5.5 14.6a6.5 6.5 0 0 0 13 0C18.5 9.8 12 2.5 12 2.5z"/></symbol>
+    <symbol id="t-eletrico" viewBox="0 0 24 24"><polygon points="13.6,2 5.4,13.4 10.8,13.4 9.4,22 18.6,10 12.8,10"/></symbol>
+    <symbol id="t-planta" viewBox="0 0 24 24"><path d="M4.5 19.5C4.2 10.5 9.5 4.2 19.8 4.2c.3 9.8-5 15.6-15.3 15.3z"/><path d="M3.5 20.5L10 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="t-gelo" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9"/><path d="M9.5 4.8L12 7.3l2.5-2.5M9.5 19.2L12 16.7l2.5 2.5"/></g></symbol>
+    <symbol id="t-lutador" viewBox="0 0 24 24"><circle cx="7.6" cy="9" r="2.4"/><circle cx="11.2" cy="8" r="2.4"/><circle cx="14.8" cy="8" r="2.4"/><circle cx="18.2" cy="9.2" r="2.2"/><rect x="5.2" y="9" width="15.2" height="10.8" rx="3.6"/></symbol>
+    <symbol id="t-veneno" viewBox="0 0 24 24"><circle cx="9" cy="14.5" r="5.2"/><circle cx="16.6" cy="8.6" r="3.4"/><circle cx="16" cy="17.8" r="2.4"/></symbol>
+    <symbol id="t-terra" viewBox="0 0 24 24"><path d="M2 20L9 7.5l3.8 6.2 2.7-3.6L22 20z"/></symbol>
+    <symbol id="t-voador" viewBox="0 0 24 24"><path d="M2 9.2C5.8 6.8 9.6 7.8 12 12.2c2.4-4.4 6.2-5.4 10-3-3.6.5-6.6 2.6-10 8.6-3.4-6-6.4-8.1-10-8.6z"/></symbol>
+    <symbol id="t-psiquico" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M1.8 12C4.5 7 8 5 12 5s7.5 2 10.2 7c-2.7 5-6.2 7-10.2 7S4.5 17 1.8 12zM12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z"/><circle cx="12" cy="12" r="1.6"/></symbol>
+    <symbol id="t-inseto" viewBox="0 0 24 24"><ellipse cx="12" cy="14" rx="4.6" ry="6.2"/><circle cx="12" cy="6.6" r="2.6"/><path d="M7.6 11L3.5 9M7.4 15H3M8 18.5l-3.5 2.5M16.4 11l4.1-2M16.6 15H21M16 18.5l3.5 2.5M10.5 4.6L9 2.5M13.5 4.6L15 2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="t-pedra" viewBox="0 0 24 24"><path d="M4.8 17.2L3.5 11 8 5.2l7-.8 5.5 5.2-1.2 7.8L12 20z"/></symbol>
+    <symbol id="t-fantasma" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5A7.5 7.5 0 0 0 4.5 10v11l2.8-2.2L9.7 21l2.3-2.2 2.3 2.2 2.4-2.2 2.8 2.2V10A7.5 7.5 0 0 0 12 2.5zM9 9.8a1.4 1.4 0 1 0 2.8 0 1.4 1.4 0 1 0-2.8 0zM13.2 9.8a1.4 1.4 0 1 0 2.8 0 1.4 1.4 0 1 0-2.8 0z"/></symbol>
+    <symbol id="t-dragao" viewBox="0 0 24 24"><path d="M6 3c3 4 4 10 2.5 18M12 3c3 4 4 10 2.5 18M18 3c2 4 2.5 10 1 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></symbol>
+    <symbol id="t-sombrio" viewBox="0 0 24 24"><path d="M20.5 13.2A8.8 8.8 0 1 1 10.8 3.5a6.9 6.9 0 0 0 9.7 9.7z"/></symbol>
+    <symbol id="t-aco" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.8l7.9 4.6v9.2L12 21.2l-7.9-4.6V7.4zM12 8.4a3.6 3.6 0 1 0 0 7.2 3.6 3.6 0 0 0 0-7.2z"/></symbol>
+    <symbol id="t-fada" viewBox="0 0 24 24"><path d="M10.5 2.5c.8 4.8 2.7 6.7 7.5 7.5-4.8.8-6.7 2.7-7.5 7.5-.8-4.8-2.7-6.7-7.5-7.5 4.8-.8 6.7-2.7 7.5-7.5z"/><path d="M19 16.5c.3 1.7 1 2.4 2.7 2.7-1.7.3-2.4 1-2.7 2.7-.3-1.7-1-2.4-2.7-2.7 1.7-.3 2.4-1 2.7-2.7z"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="wheel" id="wheel" aria-hidden="true"></div>
+    <div>
+      <h1>Tipagem Pokémon</h1>
+      <p class="sub">Consulta rápida de batalha · 18 tipos</p>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <div class="seg" role="tablist" aria-label="Modo de consulta">
+      <button type="button" role="tab" id="tb-def" aria-selected="true" aria-controls="p-def">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l7.2 2.9v5.7c0 4.6-3 8-7.2 9.8-4.2-1.8-7.2-5.2-7.2-9.8V5.7z"/></svg>Defesa
+      </button>
+      <button type="button" role="tab" id="tb-atk" aria-selected="false" aria-controls="p-atk" tabindex="-1">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 4.5L9 15M7 11.5l5.5 5.5M8 16l-3 3"/></svg>Ataque
+      </button>
+      <button type="button" role="tab" id="tb-tab" aria-selected="false" aria-controls="p-tab" tabindex="-1">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.2"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.2"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.2"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.2"/></svg>Tabela
+      </button>
+    </div>
+  </div>
+
+  <main>
+    <!-- DEFESA -->
+    <section id="p-def" role="tabpanel" aria-labelledby="tb-def">
+      <div class="card">
+        <div class="card-h">
+          <h2>Tipo do oponente</h2>
+          <small>escolha até 2</small>
+          <button type="button" class="link" id="clear-def">Limpar</button>
+        </div>
+        <div class="picker" id="pick-def"></div>
+      </div>
+      <div class="view-seg" role="group" aria-label="O que mostrar sobre o oponente">
+        <button type="button" id="vw-def" aria-pressed="true">Como defende</button>
+        <button type="button" id="vw-atk" aria-pressed="false">Contra quem é forte</button>
+      </div>
+      <div class="res" id="res-def" aria-live="polite"></div>
+    </section>
+
+    <!-- ATAQUE -->
+    <section id="p-atk" role="tabpanel" aria-labelledby="tb-atk" hidden>
+      <div class="card">
+        <div class="card-h">
+          <h2>Tipo do seu golpe</h2>
+          <small>escolha até 2</small>
+          <button type="button" class="link" id="clear-atk">Limpar</button>
+        </div>
+        <div class="picker" id="pick-atk"></div>
+      </div>
+      <div class="res" id="res-atk" aria-live="polite"></div>
+    </section>
+
+    <!-- TABELA -->
+    <section id="p-tab" role="tabpanel" aria-labelledby="tb-tab" hidden>
+      <div class="card ro-card" id="ro" aria-live="polite"></div>
+      <p class="mx-cap">Linhas: quem ataca. Colunas: quem defende. Toque em uma casa para ler.</p>
+      <div class="mx" id="mx"></div>
+      <div class="legend">
+        <span><i class="sw m2">2</i> 2× super efetivo</span>
+        <span><i class="sw mh">½</i> ½× pouco efetivo</span>
+        <span><i class="sw m0">0</i> 0× sem efeito</span>
+        <span><i class="sw"></i> vazio = 1×</span>
+      </div>
+      <details class="key">
+        <summary>Ver nome de cada ícone</summary>
+        <div class="chips" id="key-chips"></div>
+      </details>
+    </section>
+  </main>
+
+  <p class="foot">Tabela da 6ª geração em diante (com Fada). Em tipos duplos os multiplicadores se multiplicam: 2× e 2× viram 4×, 2× e ½× viram 1×.</p>
+</div>
+
+<script>
+/* ---------- Dados ---------- */
+const TYPES = [
+  { id: 'normal',   n: 'Normal',   c: '#A8A77A' },
+  { id: 'fogo',     n: 'Fogo',     c: '#EE8130' },
+  { id: 'agua',     n: 'Água',     c: '#6390F0' },
+  { id: 'eletrico', n: 'Elétrico', c: '#F7D02C' },
+  { id: 'planta',   n: 'Planta',   c: '#7AC74C' },
+  { id: 'gelo',     n: 'Gelo',     c: '#96D9D6' },
+  { id: 'lutador',  n: 'Lutador',  c: '#C22E28' },
+  { id: 'veneno',   n: 'Veneno',   c: '#A33EA1' },
+  { id: 'terra',    n: 'Terra',    c: '#E2BF65' },
+  { id: 'voador',   n: 'Voador',   c: '#A98FF3' },
+  { id: 'psiquico', n: 'Psíquico', c: '#F95587' },
+  { id: 'inseto',   n: 'Inseto',   c: '#A6B91A' },
+  { id: 'pedra',    n: 'Pedra',    c: '#B6A136' },
+  { id: 'fantasma', n: 'Fantasma', c: '#735797' },
+  { id: 'dragao',   n: 'Dragão',   c: '#6F35FC' },
+  { id: 'sombrio',  n: 'Sombrio',  c: '#705746' },
+  { id: 'aco',      n: 'Aço',      c: '#B7B7CE' },
+  { id: 'fada',     n: 'Fada',     c: '#D685AD' }
+];
+
+/* d = 2× (super efetivo), h = ½× (pouco efetivo), z = 0× (sem efeito). Chave = tipo do golpe. */
+const CHART = {
+  normal:   { h: ['pedra','aco'], z: ['fantasma'] },
+  fogo:     { d: ['planta','gelo','inseto','aco'], h: ['fogo','agua','pedra','dragao'] },
+  agua:     { d: ['fogo','terra','pedra'], h: ['agua','planta','dragao'] },
+  eletrico: { d: ['agua','voador'], h: ['eletrico','planta','dragao'], z: ['terra'] },
+  planta:   { d: ['agua','terra','pedra'], h: ['fogo','planta','veneno','voador','inseto','dragao','aco'] },
+  gelo:     { d: ['planta','terra','voador','dragao'], h: ['fogo','agua','gelo','aco'] },
+  lutador:  { d: ['normal','gelo','pedra','sombrio','aco'], h: ['veneno','voador','psiquico','inseto','fada'], z: ['fantasma'] },
+  veneno:   { d: ['planta','fada'], h: ['veneno','terra','pedra','fantasma'], z: ['aco'] },
+  terra:    { d: ['fogo','eletrico','veneno','pedra','aco'], h: ['planta','inseto'], z: ['voador'] },
+  voador:   { d: ['planta','lutador','inseto'], h: ['eletrico','pedra','aco'] },
+  psiquico: { d: ['lutador','veneno'], h: ['psiquico','aco'], z: ['sombrio'] },
+  inseto:   { d: ['planta','psiquico','sombrio'], h: ['fogo','lutador','veneno','voador','fantasma','aco','fada'] },
+  pedra:    { d: ['fogo','gelo','voador','inseto'], h: ['lutador','terra','aco'] },
+  fantasma: { d: ['psiquico','fantasma'], h: ['sombrio'], z: ['normal'] },
+  dragao:   { d: ['dragao'], h: ['aco'], z: ['fada'] },
+  sombrio:  { d: ['psiquico','fantasma'], h: ['lutador','sombrio','fada'] },
+  aco:      { d: ['gelo','pedra','fada'], h: ['fogo','agua','eletrico','aco'] },
+  fada:     { d: ['lutador','dragao','sombrio'], h: ['fogo','veneno','aco'] }
+};
+
+function eff(a, d) {
+  const c = CHART[a];
+  if (c.z && c.z.includes(d)) return 0;
+  if (c.d && c.d.includes(d)) return 2;
+  if (c.h && c.h.includes(d)) return 0.5;
+  return 1;
+}
+function mult(a, defs) { return defs.reduce((m, d) => m * eff(a, d), 1); }
+/*DATA-END*/
+
+/* ---------- Apoio ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const T = Object.fromEntries(TYPES.map(t => [t.id, t]));
+
+function lum(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+  return 0.2126 * f((n >> 16) & 255) + 0.7152 * f((n >> 8) & 255) + 0.0722 * f(n & 255);
+}
+TYPES.forEach(t => {
+  const L = lum(t.c);
+  const onWhite = 1.05 / (L + 0.05);
+  const onDark = (L + 0.05) / (lum('#10151F') + 0.05);
+  t.g = onWhite >= onDark ? '#FFFFFF' : '#10151F';
+});
+
+const FMT = { 4: '4×', 2: '2×', 1: '1×', 0.5: '½×', 0.25: '¼×', 0: '0×' };
+const CLS = { 4: 'm4', 2: 'm2', 1: 'm1', 0.5: 'mh', 0.25: 'mq', 0: 'm0' };
+const icon = id => `<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#t-${id}"/></svg>`;
+const chip = t => `<span class="chip" style="--c:${t.c};--g:${t.g}">${icon(t.id)}${t.n}</span>`;
+const plural = n => n === 1 ? '1 tipo' : n + ' tipos';
+
+const state = { tab: 'def', def: ['fogo', 'voador'], defView: 'def', atk: ['terra', 'dragao'], r: 'agua', c: 'fogo' };
+
+/* Roda de cores do cabeçalho */
+(function () {
+  const step = 360 / TYPES.length;
+  $('#wheel').style.background = 'conic-gradient(' +
+    TYPES.map((t, i) => `${t.c} ${i * step}deg ${(i + 1) * step}deg`).join(',') + ')';
+})();
+
+/* ---------- Seletores ---------- */
+function buildPicker(el, withOrd) {
+  el.innerHTML = TYPES.map(t =>
+    `<button type="button" class="pk" data-t="${t.id}" aria-pressed="false" style="--c:${t.c};--g:${t.g}">` +
+    `${icon(t.id)}<span>${t.n}</span>${withOrd ? '<b class="ord" aria-hidden="true"></b>' : ''}</button>`
+  ).join('');
+}
+function syncPicker(el, sel) {
+  el.querySelectorAll('.pk').forEach(b => {
+    const i = sel.indexOf(b.dataset.t);
+    b.setAttribute('aria-pressed', i > -1 ? 'true' : 'false');
+    const o = b.querySelector('.ord');
+    if (o) o.textContent = i > -1 ? String(i + 1) : '';
+  });
+}
+const pickDef = $('#pick-def'), pickAtk = $('#pick-atk');
+buildPicker(pickDef, true);
+buildPicker(pickAtk, true);
+
+/* ---------- Defesa ---------- */
+const DEF_META = {
+  4:    'Fraqueza dupla',
+  2:    'Fraco contra',
+  0.5:  'Resiste a',
+  0.25: 'Resiste muito a',
+  0:    'Imune a',
+  1:    'Dano normal'
+};
+function group(m, items, titles, open) {
+  const head = `<span class="mp ${CLS[m]}">${FMT[m]}</span><h3>${titles[m]}</h3><span class="ct">${plural(items.length)}</span>`;
+  const body = `<div class="chips">${items.map(chip).join('')}</div>`;
+  if (m === 1) {
+    return `<details class="grp"><summary class="gh">${head}<i class="chev" aria-hidden="true"></i></summary>${body}</details>`;
+  }
+  return `<section class="grp"><div class="gh">${head}</div>${body}</section>`;
+}
+function renderDef() {
+  const sel = state.def;
+  syncPicker(pickDef, sel);
+  $('#vw-def').setAttribute('aria-pressed', state.defView === 'def' ? 'true' : 'false');
+  $('#vw-atk').setAttribute('aria-pressed', state.defView === 'atk' ? 'true' : 'false');
+  const out = $('#res-def');
+  if (!sel.length) {
+    out.innerHTML = '<p class="empty">Toque em até 2 tipos do oponente.</p>';
+    return;
+  }
+  const title = sel.map(id => T[id].n).join(' + ');
+  if (state.defView === 'atk') {
+    out.innerHTML =
+      `<h2 class="who">${title}<small>Contra quem os golpes dele são fortes. Com dois tipos, cada um vale separado.</small></h2>` +
+      sel.map(id => `<section class="off"><div class="off-h">${chip(T[id])}<span>Golpes deste tipo</span></div>${offGroups(id)}</section>`).join('');
+    return;
+  }
+  const buckets = { 4: [], 2: [], 1: [], 0.5: [], 0.25: [], 0: [] };
+  TYPES.forEach(a => buckets[mult(a.id, sel)].push(a));
+  const order = [4, 2, 0.5, 0.25, 0, 1];
+  out.innerHTML =
+    `<h2 class="who">${title}<small>Dano que ele recebe de cada tipo de golpe.</small></h2>` +
+    order.filter(m => buckets[m].length).map(m => group(m, buckets[m], DEF_META)).join('');
+}
+pickDef.addEventListener('click', e => {
+  const b = e.target.closest('.pk');
+  if (!b) return;
+  const id = b.dataset.t, i = state.def.indexOf(id);
+  if (i > -1) state.def.splice(i, 1);
+  else { if (state.def.length === 2) state.def.shift(); state.def.push(id); }
+  renderDef();
+});
+$('#clear-def').addEventListener('click', () => { state.def = []; renderDef(); });
+$('#vw-def').addEventListener('click', () => { state.defView = 'def'; renderDef(); });
+$('#vw-atk').addEventListener('click', () => { state.defView = 'atk'; renderDef(); });
+
+/* ---------- Ataque ---------- */
+const ATK_META = {
+  2:   'Super efetivo contra',
+  0.5: 'Pouco efetivo contra',
+  0:   'Sem efeito em',
+  1:   'Dano normal em'
+};
+function offGroups(a) {
+  const buckets = { 2: [], 1: [], 0.5: [], 0: [] };
+  TYPES.forEach(d => buckets[eff(a, d.id)].push(d));
+  return [2, 0.5, 0, 1].filter(m => buckets[m].length).map(m => group(m, buckets[m], ATK_META)).join('');
+}
+function renderAtk() {
+  const sel = state.atk;
+  syncPicker(pickAtk, sel);
+  const out = $('#res-atk');
+  if (!sel.length) {
+    out.innerHTML = '<p class="empty">Toque em até 2 tipos de golpe, por exemplo os dois tipos do seu Pokémon para o STAB.</p>';
+    return;
+  }
+  if (sel.length === 1) {
+    out.innerHTML =
+      `<h2 class="who">${T[sel[0]].n}<small>Dano que o seu golpe causa em cada tipo.</small></h2>` + offGroups(sel[0]);
+    return;
+  }
+  out.innerHTML =
+    `<h2 class="who">${sel.map(id => T[id].n).join(' + ')}<small>Cada tipo de golpe é lido separado. Os ataques não se somam.</small></h2>` +
+    sel.map(id => `<section class="off"><div class="off-h">${chip(T[id])}<span>Golpes deste tipo</span></div>${offGroups(id)}</section>`).join('');
+}
+pickAtk.addEventListener('click', e => {
+  const b = e.target.closest('.pk');
+  if (!b) return;
+  const id = b.dataset.t, i = state.atk.indexOf(id);
+  if (i > -1) state.atk.splice(i, 1);
+  else { if (state.atk.length === 2) state.atk.shift(); state.atk.push(id); }
+  renderAtk();
+});
+$('#clear-atk').addEventListener('click', () => { state.atk = []; renderAtk(); });
+
+/* ---------- Tabela ---------- */
+const MX_TXT = { 2: '2', 0.5: '½', 0: '0', 1: '' };
+const MX_DESC = { 2: 'Super efetivo', 0.5: 'Pouco efetivo', 0: 'Sem efeito', 1: 'Dano normal' };
+const mx = $('#mx');
+(function buildMatrix() {
+  let h = '<div class="corner" aria-hidden="true"></div>';
+  TYPES.forEach(d => {
+    h += `<div class="hd" data-k="c${d.id}" style="--c:${d.c};--g:${d.g}" title="${d.n}" role="img" aria-label="Defensor ${d.n}">${icon(d.id)}</div>`;
+  });
+  TYPES.forEach(a => {
+    h += `<div class="hd" data-k="r${a.id}" style="--c:${a.c};--g:${a.g}" title="${a.n}" role="img" aria-label="Atacante ${a.n}">${icon(a.id)}</div>`;
+    TYPES.forEach(d => {
+      const m = eff(a.id, d.id);
+      h += `<button type="button" class="cell ${CLS[m]}" data-a="${a.id}" data-d="${d.id}" aria-label="${a.n} contra ${d.n}: ${FMT[m]}">${MX_TXT[m]}</button>`;
+    });
+  });
+  mx.innerHTML = h;
+  $('#key-chips').innerHTML = TYPES.map(chip).join('');
+})();
+function renderMatrix() {
+  const { r, c } = state;
+  mx.querySelectorAll('.cell').forEach(b => {
+    b.classList.toggle('sel', b.dataset.a === r && b.dataset.d === c);
+    b.classList.toggle('rc', b.dataset.a === r || b.dataset.d === c);
+  });
+  mx.querySelectorAll('.hd').forEach(h => h.classList.toggle('on', h.dataset.k === 'r' + r || h.dataset.k === 'c' + c));
+  const m = eff(r, c);
+  $('#ro').innerHTML =
+    `<div class="pair"><div><small>Atacante</small>${chip(T[r])}</div><span class="arrow" aria-hidden="true">→</span><div><small>Defensor</small>${chip(T[c])}</div></div>` +
+    `<div class="ro-res"><span class="mp ${CLS[m]}">${FMT[m]}</span><span>${MX_DESC[m]}</span></div>`;
+}
+mx.addEventListener('click', e => {
+  const b = e.target.closest('.cell');
+  if (!b) return;
+  state.r = b.dataset.a;
+  state.c = b.dataset.d;
+  renderMatrix();
+});
+
+/* ---------- Abas ---------- */
+const TABS = ['def', 'atk', 'tab'];
+function setTab(t) {
+  state.tab = t;
+  TABS.forEach(k => {
+    $('#p-' + k).hidden = k !== t;
+    const b = $('#tb-' + k);
+    b.setAttribute('aria-selected', k === t ? 'true' : 'false');
+    b.tabIndex = k === t ? 0 : -1;
+  });
+}
+TABS.forEach(k => $('#tb-' + k).addEventListener('click', () => setTab(k)));
+$('.seg').addEventListener('keydown', e => {
+  if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+  const i = TABS.indexOf(state.tab);
+  const n = TABS[(i + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length];
+  setTab(n);
+  $('#tb-' + n).focus();
+});
+
+renderDef();
+renderAtk();
+renderMatrix();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+}
+</script>
+</body></html>
