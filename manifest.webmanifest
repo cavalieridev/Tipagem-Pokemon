@@ -1,0 +1,40 @@
+{
+  "id": "./",
+  "name": "Tipagem Pokémon",
+  "short_name": "Tipagem",
+  "description": "Consulta rápida de tipagem Pokémon: defesa, ataque e tabela completa dos 18 tipos. Funciona offline.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#EDF0F6",
+  "theme_color": "#EDF0F6",
+  "lang": "pt-BR",
+  "categories": ["games", "utilities"],
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
